@@ -15,10 +15,10 @@ import {
 // ─── ESTADO GLOBAL ───────────────────────────────────
 let miNombre          = '';
 let salaActual        = null;
-let miembrosActuales  = [];
 let mensajesPrevios   = 0;
 let unsubMensajes     = null;
 let unsubSalas        = null;
+let unsubSala         = null; // listener del doc de sala (para miembros)
 
 // ══════════════════════════════════════════════════════
 //  ROUTER DE VISTAS
@@ -248,13 +248,16 @@ function mostrarUsuarioActual() {
     logoutBtn.addEventListener('click', async () => {
         if (unsubMensajes) { unsubMensajes(); unsubMensajes = null; }
         if (unsubSalas)    { unsubSalas();    unsubSalas    = null; }
-        miNombre = ''; salaActual = null; miembrosActuales = [];
+        if (unsubSala)     { unsubSala();     unsubSala     = null; }
+        miNombre = ''; salaActual = null;
         sessionStorage.clear();
         try { await signOut(auth); } catch (_) {}
         // Reset UI
         document.getElementById('chat-container').innerHTML = '';
         document.getElementById('sala-nombre-texto').textContent = 'Bienvenido';
         document.getElementById('salas-list').innerHTML = '';
+        document.getElementById('members-list').innerHTML = '';
+        document.getElementById('members-count').textContent = '0';
         document.getElementById('login-email').value = '';
         document.getElementById('login-password').value = '';
         document.getElementById('login-btn').disabled = false;
@@ -301,12 +304,20 @@ async function unirseASala(salaId, nombre) {
     salaActual = salaId;
     document.getElementById('sala-nombre-texto').textContent = nombre;
     document.getElementById('chat-container').innerHTML = '';
-    miembrosActuales = []; mensajesPrevios = 0;
-    renderizarMiembros();
-    agregarMiembro(miNombre);
+    mensajesPrevios = 0;
 
+    // Agregar usuario a la sala en Firestore
     try { await updateDoc(doc(db, 'salas', salaId), { miembros: arrayUnion(miNombre) }); } catch (_) {}
 
+    // ── Listener de miembros (sala doc en tiempo real) ──
+    if (unsubSala) unsubSala();
+    unsubSala = onSnapshot(doc(db, 'salas', salaId), (snap) => {
+        if (!snap.exists()) return;
+        const miembros = snap.data().miembros || [];
+        renderizarMiembros(miembros);
+    }, err => console.error('Sala doc error:', err));
+
+    // ── Listener de mensajes ─────────────────────────────
     if (unsubMensajes) unsubMensajes();
     const q = query(collection(db, 'salas', salaId, 'mensajes'), orderBy('timestamp', 'asc'), limit(100));
     unsubMensajes = onSnapshot(q, (snap) => {
@@ -333,7 +344,10 @@ async function eliminarSala(salaId, nombre) {
             salaActual = null;
             document.getElementById('chat-container').innerHTML = '';
             document.getElementById('sala-nombre-texto').textContent = 'Bienvenido';
+            document.getElementById('members-list').innerHTML = '';
+            document.getElementById('members-count').textContent = '0';
             if (unsubMensajes) { unsubMensajes(); unsubMensajes = null; }
+            if (unsubSala)     { unsubSala();     unsubSala     = null; }
         }
     } catch (e) { console.error(e); }
 }
@@ -472,22 +486,17 @@ function renderMensaje(data) {
 }
 
 // ══════════════════════════════════════════════════════
-//  CHAT — MIEMBROS
+//  CHAT — MIEMBROS (datos desde Firestore)
 // ══════════════════════════════════════════════════════
-function agregarMiembro(uid) {
-    if (miembrosActuales.includes(uid)) return;
-    miembrosActuales.push(uid);
-    renderizarMiembros();
-}
-
-function renderizarMiembros() {
+function renderizarMiembros(miembros = []) {
     const list = document.getElementById('members-list');
     list.innerHTML = '';
-    document.getElementById('members-count').textContent = miembrosActuales.length;
-    miembrosActuales.forEach(uid => {
+    document.getElementById('members-count').textContent = miembros.length;
+    miembros.forEach(uid => {
         const item = document.createElement('div'); item.className = 'member-item';
-        const avatar = document.createElement('div'); avatar.className = 'member-avatar'; avatar.textContent = uid.charAt(0).toUpperCase();
-        const name = document.createElement('span'); name.className = 'member-name'; name.textContent = uid;
+        const avatar = document.createElement('div'); avatar.className = 'member-avatar';
+        avatar.textContent = (uid || '?').charAt(0).toUpperCase();
+        const name = document.createElement('span'); name.className = 'member-name'; name.textContent = uid || 'Usuario';
         const dot = document.createElement('span'); dot.className = 'member-online-dot';
         item.append(avatar, name, dot);
         list.appendChild(item);
