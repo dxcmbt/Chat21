@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat21</title>
+    <link rel="stylesheet" href="css/chat.css">
+    <script>
+        const usuario = sessionStorage.getItem('usuarioChat');
+        if (!usuario) window.location.replace('/login');
+
+        // Apply saved theme before render to avoid flash
+        const savedTheme = localStorage.getItem('chat21-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+
+<body>
+
+    <!-- ══ SIDEBAR ════════════════════════════════════════ -->
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h2>Salas</h2>
+            <button id="dark-mode-toggle" title="Cambiar tema" aria-label="Cambiar tema">
+                <!-- Sun icon (light mode) -->
+                <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <!-- Moon icon (dark mode) -->
+                <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="salas-list" id="salas-list"></div>
+
+        <form id="crear-sala-form">
+            <input type="text" id="nueva-sala-input" placeholder="Nueva sala..." required autocomplete="off">
+            <button type="submit" title="Crear sala" aria-label="Crear sala">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+        </form>
+    </aside>
+
+    <!-- ══ MAIN CONTAINER ════════════════════════════════ -->
+    <div id="main-container">
+
+        <!-- Header -->
+        <header id="sala-titulo">
+            <div class="header-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+            </div>
+            <span id="sala-nombre-texto">Bienvenido</span>
+            <div class="header-actions">
+                <button id="members-toggle-btn" title="Ver miembros" aria-label="Ver miembros">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Messages -->
+        <main id="chat-container"></main>
+
+        <!-- Emoji / Media toolbar -->
+        <div id="chat-tools">
+            <button id="emoji-button" type="button" title="Emojis" aria-label="Emojis">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                    <line x1="9" y1="9" x2="9.01" y2="9"/>
+                    <line x1="15" y1="9" x2="15.01" y2="9"/>
+                </svg>
+            </button>
+            <button id="image-button" type="button" title="Imagen" aria-label="Enviar imagen">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+            </button>
+            <button id="audio-button" type="button" title="Audio" aria-label="Enviar audio">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+            </button>
+
+            <div id="emoji-panel" class="hidden">
+                <button type="button" class="emoji">😀</button>
+                <button type="button" class="emoji">😂</button>
+                <button type="button" class="emoji">😍</button>
+                <button type="button" class="emoji">😎</button>
+                <button type="button" class="emoji">😢</button>
+                <button type="button" class="emoji">😡</button>
+                <button type="button" class="emoji">🤔</button>
+                <button type="button" class="emoji">🥳</button>
+                <button type="button" class="emoji">👍</button>
+                <button type="button" class="emoji">👎</button>
+                <button type="button" class="emoji">❤️</button>
+                <button type="button" class="emoji">🔥</button>
+                <button type="button" class="emoji">✨</button>
+                <button type="button" class="emoji">🎉</button>
+                <button type="button" class="emoji">💯</button>
+                <button type="button" class="emoji">🙏</button>
+            </div>
+
+            <input id="image-input" type="file" accept="image/*" hidden>
+            <input id="audio-input" type="file" accept="audio/*" hidden>
+        </div>
+
+        <!-- Message Input -->
+        <form id="form-container">
+            <input id="input-mensaje" type="text" placeholder="Mensaje..." autocomplete="off" required>
+            <button type="submit" title="Enviar" aria-label="Enviar mensaje">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <!-- ══ MEMBERS PANEL ══════════════════════════════════ -->
+    <aside id="members-panel" class="hidden">
+        <div class="members-header">
+            <h3>Miembros</h3>
+            <span class="members-count" id="members-count">0</span>
+        </div>
+        <div id="members-list"></div>
+    </aside>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/chat.js"></script>
+    <script>
+        // ── Dark Mode Toggle ──────────────────────────────
+        const toggleBtn = document.getElementById('dark-mode-toggle');
+        const iconSun  = document.getElementById('icon-sun');
+        const iconMoon = document.getElementById('icon-moon');
+        const html     = document.documentElement;
+
+        function applyTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('chat21-theme', theme);
+            if (theme === 'dark') {
+                iconSun.style.display  = 'none';
+                iconMoon.style.display = 'block';
+            } else {
+                iconSun.style.display  = 'block';
+                iconMoon.style.display = 'none';
+            }
+        }
+
+        // Init icon state
+        applyTheme(localStorage.getItem('chat21-theme') || 'light');
+
+        toggleBtn.addEventListener('click', () => {
+            const current = html.getAttribute('data-theme');
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        });
+
+        // ── Members Panel Toggle ──────────────────────────
+        const membersToggleBtn = document.getElementById('members-toggle-btn');
+        const membersPanel     = document.getElementById('members-panel');
+
+        membersToggleBtn.addEventListener('click', () => {
+            membersPanel.classList.toggle('hidden');
+        });
+    </script>
+</body>
+</html>

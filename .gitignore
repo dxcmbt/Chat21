@@ -1,0 +1,4 @@
+node_modules/
+chat21-b25b2-firebase-adminsdk-key.json
+.env
+.DS_Store
