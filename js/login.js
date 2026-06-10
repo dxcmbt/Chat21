@@ -58,7 +58,7 @@ form.addEventListener('submit', async (e) => {
         sessionStorage.setItem('uidUsuario', user.uid);
 
         // 5. Redirigir al chat
-        window.location.href = '/';
+        window.location.href = 'index.html';
 
     } catch (error) {
         btnSubmit.disabled = false;

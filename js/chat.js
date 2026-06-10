@@ -4,9 +4,9 @@ const socket = io();
 //  SISTEMA DE AUDIO — notificaciones
 // =====================================================
 const _sfx = {
-    entrar:  new Audio('/audio/entrar.mp3'),
-    irse:    new Audio('/audio/irse.mp3'),
-    mensaje: new Audio('/audio/mensaje.mp3')
+    entrar:  new Audio('audio/entrar.mp3'),
+    irse:    new Audio('audio/irse.mp3'),
+    mensaje: new Audio('audio/mensaje.mp3')
 };
 // Precargar y establecer volumen
 Object.values(_sfx).forEach(a => { a.preload = 'auto'; a.volume = 0.6; });
@@ -87,7 +87,7 @@ function mostrarUsuarioActual() {
     logoutBtn.onmouseout  = () => { logoutBtn.style.background = 'transparent'; logoutBtn.style.color = 'var(--text-secondary)'; };
     logoutBtn.addEventListener('click', () => {
         sessionStorage.clear();
-        window.location.href = '/login';
+        window.location.href = 'login.html';
     });
 
     bar.appendChild(avatar);
@@ -180,7 +180,7 @@ if (miNombre) {
     iniciarChat(miNombre);
 } else {
     // No hay sesión — redirigir al login
-    window.location.href = '/login';
+    window.location.href = 'login.html';
 }
 
 function enviarMensajeTexto(texto) {

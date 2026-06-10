@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/chat.css">
     <script>
         const usuario = sessionStorage.getItem('usuarioChat');
-        if (!usuario) window.location.replace('/login');
+        if (!usuario) window.location.replace('login.html');
 
         // Apply saved theme before render to avoid flash
         const savedTheme = localStorage.getItem('chat21-theme') || 'light';
