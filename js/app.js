@@ -68,8 +68,8 @@ document.getElementById('members-toggle-btn').addEventListener('click', () => {
 // ══════════════════════════════════════════════════════
 const _sfx = {
     mensaje: new Audio('audio/mensaje.mp3'),
-    entrar:  new Audio('audio/entrar.mp3'),
-    irse:    new Audio('audio/irse.mp3')
+    entrar:  new Audio('audio/Unirse.mp3'),
+    irse:    new Audio('audio/Salida.mp3')
 };
 Object.values(_sfx).forEach(a => { a.preload = 'auto'; a.volume = 0.6; });
 function play(s) {
@@ -310,11 +310,22 @@ async function unirseASala(salaId, nombre) {
     try { await updateDoc(doc(db, 'salas', salaId), { miembros: arrayUnion(miNombre) }); } catch (_) {}
 
     // ── Listener de miembros (sala doc en tiempo real) ──
+    let miembrosAnteriores = null;
     if (unsubSala) unsubSala();
     unsubSala = onSnapshot(doc(db, 'salas', salaId), (snap) => {
         if (!snap.exists()) return;
         const miembros = snap.data().miembros || [];
         renderizarMiembros(miembros);
+
+        // Detectar entradas y salidas para reproducir sonido
+        if (miembrosAnteriores !== null) {
+            const entraron = miembros.filter(m => !miembrosAnteriores.includes(m));
+            const salieron = miembrosAnteriores.filter(m => !miembros.includes(m));
+            // Solo reproducir si NO soy yo quien entró (ya que yo mismo acabo de unirme)
+            entraron.forEach(m => { if (m !== miNombre) play('entrar'); });
+            salieron.forEach(() => play('irse'));
+        }
+        miembrosAnteriores = [...miembros];
     }, err => console.error('Sala doc error:', err));
 
     // ── Listener de mensajes ─────────────────────────────
