@@ -400,30 +400,46 @@ document.getElementById('form-container').addEventListener('submit', async (e) =
     play('mensaje');
 });
 
-// Emojis — inserta el emoji en el campo de texto (sin enviar ni cerrar panel)
-document.getElementById('emoji-button').addEventListener('click', () => {
-    document.getElementById('emoji-panel').classList.toggle('hidden');
-});
-document.getElementById('emoji-panel').addEventListener('click', (e) => {
-    const btn = e.target.closest('.emoji');
-    if (!btn) return;
-    const input = document.getElementById('input-mensaje');
-    const start = input.selectionStart ?? input.value.length;
-    const end   = input.selectionEnd   ?? input.value.length;
-    const emoji = btn.textContent;
-    input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
-    // El panel se mantiene abierto para seleccionar más emojis
-    // Presiona Enviar o Enter para mandar el mensaje
-});
-// Cerrar panel si se hace clic fuera
-document.addEventListener('click', (e) => {
-    const panel = document.getElementById('emoji-panel');
-    const btn   = document.getElementById('emoji-button');
-    if (!panel.classList.contains('hidden') &&
-        !panel.contains(e.target) && e.target !== btn) {
-        panel.classList.add('hidden');
-    }
-});
+// ── Emojis — inserta en el campo de texto, NO envía el mensaje ──
+(function setupEmojis() {
+    const emojiBtn   = document.getElementById('emoji-button');
+    const emojiPanel = document.getElementById('emoji-panel');
+    const inputMsg   = document.getElementById('input-mensaje');
+
+    // Abrir / cerrar panel
+    emojiBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        emojiPanel.classList.toggle('hidden');
+    });
+
+    // Al hacer clic en un emoji: insertar en el campo de texto
+    emojiPanel.addEventListener('click', (e) => {
+        e.stopPropagation();          // evita que llegue al document
+        const btn = e.target.closest('.emoji');
+        if (!btn) return;
+
+        // Insertar en la posición del cursor
+        const start = inputMsg.selectionStart ?? inputMsg.value.length;
+        const end   = inputMsg.selectionEnd   ?? inputMsg.value.length;
+        const emoji = btn.dataset.emoji || btn.textContent.trim();
+        inputMsg.value = inputMsg.value.slice(0, start) + emoji + inputMsg.value.slice(end);
+        // Dejar el cursor después del emoji
+        const newPos = start + emoji.length;
+        inputMsg.setSelectionRange(newPos, newPos);
+        // NO cerrar el panel, NO enviar
+        // El usuario presiona Enter o el botón Enviar cuando quiera
+    });
+
+    // Cerrar si se hace clic fuera del panel o del botón
+    document.addEventListener('click', (e) => {
+        if (!emojiPanel.classList.contains('hidden') &&
+            !emojiPanel.contains(e.target) &&
+            !emojiBtn.contains(e.target)) {
+            emojiPanel.classList.add('hidden');
+        }
+    });
+})();
+
 
 // Imágenes
 document.getElementById('image-button').addEventListener('click', () => document.getElementById('image-input').click());
@@ -438,59 +454,66 @@ document.getElementById('image-input').addEventListener('change', () => {
     fr.readAsDataURL(file);
 });
 
-// ── Grabación de audio (estilo WhatsApp) ────────────────
-let _mediaRecorder = null;
-let _audioChunks   = [];
-let _isRecording   = false;
-let _recordStream  = null;
+// ── Grabación de audio con micrófono (clic para grabar / clic para enviar) ──
+(function setupAudioRecording() {
+    let mediaRecorder = null;
+    let audioChunks   = [];
+    let isRecording   = false;
+    let recordStream  = null;
 
-const _audioBtn = document.getElementById('audio-button');
-const _recIndicator = document.getElementById('rec-indicator');
+    const audioBtn      = document.getElementById('audio-button');
+    const recIndicator  = document.getElementById('rec-indicator');
 
-async function _startRecording() {
-    if (_isRecording) return;
-    try {
-        _recordStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        _audioChunks  = [];
-        _mediaRecorder = new MediaRecorder(_recordStream);
-        _mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) _audioChunks.push(e.data);
-        };
-        _mediaRecorder.onstop = async () => {
-            _recordStream.getTracks().forEach(t => t.stop());
-            if (_audioChunks.length === 0) return;
-            const blob = new Blob(_audioChunks, { type: 'audio/webm' });
-            const fr = new FileReader();
-            fr.onload = async (ev) => {
-                await enviarMensaje({ tipo: 'audio', url: ev.target.result, texto: 'Audio', nombreArchivo: 'audio.webm' });
-            };
-            fr.readAsDataURL(blob);
-        };
-        _mediaRecorder.start();
-        _isRecording = true;
-        _audioBtn.classList.add('recording');
-        if (_recIndicator) _recIndicator.classList.remove('hidden');
-    } catch (err) {
-        console.error('Micrófono error:', err);
-        alert('No se pudo acceder al micrófono.\nPermite el acceso en tu navegador e intenta de nuevo.');
-    }
-}
+    audioBtn.addEventListener('click', async () => {
+        if (!isRecording) {
+            // ── INICIAR grabación
+            try {
+                recordStream  = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks   = [];
+                mediaRecorder = new MediaRecorder(recordStream);
 
-function _stopRecording() {
-    if (!_isRecording || !_mediaRecorder) return;
-    _mediaRecorder.stop();
-    _isRecording = false;
-    _audioBtn.classList.remove('recording');
-    if (_recIndicator) _recIndicator.classList.add('hidden');
-}
+                mediaRecorder.ondataavailable = (ev) => {
+                    if (ev.data && ev.data.size > 0) audioChunks.push(ev.data);
+                };
 
-// Mantener presionado = grabar | Soltar = enviar
-_audioBtn.addEventListener('mousedown',  (e) => { e.preventDefault(); _startRecording(); });
-_audioBtn.addEventListener('mouseup',    ()  => _stopRecording());
-_audioBtn.addEventListener('mouseleave', ()  => _stopRecording());
-// Soporte táctil
-_audioBtn.addEventListener('touchstart', (e) => { e.preventDefault(); _startRecording(); }, { passive: false });
-_audioBtn.addEventListener('touchend',   (e) => { e.preventDefault(); _stopRecording();  }, { passive: false });
+                mediaRecorder.onstop = async () => {
+                    recordStream.getTracks().forEach(t => t.stop());
+                    if (audioChunks.length === 0) return;
+                    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        await enviarMensaje({
+                            tipo: 'audio',
+                            url: e.target.result,
+                            texto: 'Audio',
+                            nombreArchivo: 'audio.webm'
+                        });
+                        play('mensaje');
+                    };
+                    reader.readAsDataURL(blob);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                audioBtn.classList.add('recording');
+                audioBtn.title = 'Clic para detener y enviar';
+                if (recIndicator) recIndicator.classList.remove('hidden');
+
+            } catch (err) {
+                console.error('Micrófono error:', err);
+                alert('⚠️ No se pudo acceder al micrófono.\n\nPor favor permite el acceso al micrófono en tu navegador:\nClic en el candado 🔒 de la barra de dirección > Permisos > Micrófono > Permitir');
+            }
+        } else {
+            // ── DETENER y enviar
+            mediaRecorder.stop();
+            isRecording = false;
+            audioBtn.classList.remove('recording');
+            audioBtn.title = 'Clic para grabar audio';
+            if (recIndicator) recIndicator.classList.add('hidden');
+        }
+    });
+})();
+
 
 // ── Render mensaje ────────────────────────────────────
 function renderMensaje(data) {
