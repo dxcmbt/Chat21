@@ -400,15 +400,29 @@ document.getElementById('form-container').addEventListener('submit', async (e) =
     play('mensaje');
 });
 
-// Emojis
+// Emojis — inserta el emoji en el campo de texto (sin enviar ni cerrar panel)
 document.getElementById('emoji-button').addEventListener('click', () => {
     document.getElementById('emoji-panel').classList.toggle('hidden');
 });
-document.getElementById('emoji-panel').addEventListener('click', async (e) => {
+document.getElementById('emoji-panel').addEventListener('click', (e) => {
     const btn = e.target.closest('.emoji');
     if (!btn) return;
-    await enviarMensaje({ tipo: 'emoji', texto: btn.textContent });
-    document.getElementById('emoji-panel').classList.add('hidden');
+    const input = document.getElementById('input-mensaje');
+    const start = input.selectionStart ?? input.value.length;
+    const end   = input.selectionEnd   ?? input.value.length;
+    const emoji = btn.textContent;
+    input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+    // El panel se mantiene abierto para seleccionar más emojis
+    // Presiona Enviar o Enter para mandar el mensaje
+});
+// Cerrar panel si se hace clic fuera
+document.addEventListener('click', (e) => {
+    const panel = document.getElementById('emoji-panel');
+    const btn   = document.getElementById('emoji-button');
+    if (!panel.classList.contains('hidden') &&
+        !panel.contains(e.target) && e.target !== btn) {
+        panel.classList.add('hidden');
+    }
 });
 
 // Imágenes
@@ -416,10 +430,6 @@ document.getElementById('image-button').addEventListener('click', () => document
 document.getElementById('image-input').addEventListener('change', () => {
     const file = document.getElementById('image-input').files[0];
     if (!file) return;
-    new FileReader().onload = async (ev) => {
-        await enviarMensaje({ tipo: 'imagen', url: ev.target.result, texto: file.name, nombreArchivo: file.name });
-        document.getElementById('image-input').value = '';
-    };
     const fr = new FileReader();
     fr.onload = async (ev) => {
         await enviarMensaje({ tipo: 'imagen', url: ev.target.result, texto: file.name, nombreArchivo: file.name });
@@ -428,18 +438,59 @@ document.getElementById('image-input').addEventListener('change', () => {
     fr.readAsDataURL(file);
 });
 
-// Audio
-document.getElementById('audio-button').addEventListener('click', () => document.getElementById('audio-input').click());
-document.getElementById('audio-input').addEventListener('change', () => {
-    const file = document.getElementById('audio-input').files[0];
-    if (!file) return;
-    const fr = new FileReader();
-    fr.onload = async (ev) => {
-        await enviarMensaje({ tipo: 'audio', url: ev.target.result, texto: file.name, nombreArchivo: file.name });
-        document.getElementById('audio-input').value = '';
-    };
-    fr.readAsDataURL(file);
-});
+// ── Grabación de audio (estilo WhatsApp) ────────────────
+let _mediaRecorder = null;
+let _audioChunks   = [];
+let _isRecording   = false;
+let _recordStream  = null;
+
+const _audioBtn = document.getElementById('audio-button');
+const _recIndicator = document.getElementById('rec-indicator');
+
+async function _startRecording() {
+    if (_isRecording) return;
+    try {
+        _recordStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        _audioChunks  = [];
+        _mediaRecorder = new MediaRecorder(_recordStream);
+        _mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) _audioChunks.push(e.data);
+        };
+        _mediaRecorder.onstop = async () => {
+            _recordStream.getTracks().forEach(t => t.stop());
+            if (_audioChunks.length === 0) return;
+            const blob = new Blob(_audioChunks, { type: 'audio/webm' });
+            const fr = new FileReader();
+            fr.onload = async (ev) => {
+                await enviarMensaje({ tipo: 'audio', url: ev.target.result, texto: 'Audio', nombreArchivo: 'audio.webm' });
+            };
+            fr.readAsDataURL(blob);
+        };
+        _mediaRecorder.start();
+        _isRecording = true;
+        _audioBtn.classList.add('recording');
+        if (_recIndicator) _recIndicator.classList.remove('hidden');
+    } catch (err) {
+        console.error('Micrófono error:', err);
+        alert('No se pudo acceder al micrófono.\nPermite el acceso en tu navegador e intenta de nuevo.');
+    }
+}
+
+function _stopRecording() {
+    if (!_isRecording || !_mediaRecorder) return;
+    _mediaRecorder.stop();
+    _isRecording = false;
+    _audioBtn.classList.remove('recording');
+    if (_recIndicator) _recIndicator.classList.add('hidden');
+}
+
+// Mantener presionado = grabar | Soltar = enviar
+_audioBtn.addEventListener('mousedown',  (e) => { e.preventDefault(); _startRecording(); });
+_audioBtn.addEventListener('mouseup',    ()  => _stopRecording());
+_audioBtn.addEventListener('mouseleave', ()  => _stopRecording());
+// Soporte táctil
+_audioBtn.addEventListener('touchstart', (e) => { e.preventDefault(); _startRecording(); }, { passive: false });
+_audioBtn.addEventListener('touchend',   (e) => { e.preventDefault(); _stopRecording();  }, { passive: false });
 
 // ── Render mensaje ────────────────────────────────────
 function renderMensaje(data) {

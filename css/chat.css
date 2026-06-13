@@ -880,3 +880,48 @@ body {
   font-weight: 500;
 }
 .auth-link a:hover { text-decoration: underline; }
+
+/* ── Grabación de audio (micrófono estilo WhatsApp) ──── */
+#audio-button.recording {
+  background: rgba(255, 59, 48, 0.15) !important;
+  color: #ff3b30 !important;
+  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.25);
+  animation: micPulse 1s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255,59,48,0.25); }
+  50%       { box-shadow: 0 0 0 7px rgba(255,59,48,0.08); }
+}
+
+#rec-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff3b30;
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease;
+}
+
+#rec-indicator.hidden { display: none; }
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3b30;
+  flex-shrink: 0;
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
