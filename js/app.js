@@ -567,14 +567,14 @@ function renderMensaje(data) {
         img.src = data.url; img.alt = data.nombreArchivo || 'imagen'; img.className = 'mensaje-imagen';
         bubble.appendChild(img);
     } else if (data.tipo === 'audio' && data.url) {
+        div.classList.add('audio-msg'); // clase para min-width del CSS
         const audio = document.createElement('audio');
-        audio.controls = true; audio.src = data.url; audio.className = 'mensaje-audio';
+        audio.controls = true;
+        audio.src      = data.url;
+        audio.className = 'mensaje-audio';
+        audio.setAttribute('preload', 'metadata');
+        audio.setAttribute('controlslist', 'nodownload');
         bubble.appendChild(audio);
-        if (data.nombreArchivo) {
-            const n = document.createElement('div');
-            n.className = 'archivo-nombre'; n.textContent = data.nombreArchivo;
-            bubble.appendChild(n);
-        }
     } else {
         const txt = document.createElement('div');
         txt.className = 'mensaje-texto';

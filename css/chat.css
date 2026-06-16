@@ -373,6 +373,11 @@ body {
   animation: bubbleIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
 }
 
+/* Mensajes de audio: ancho mínimo para que la barra de controles sea visible */
+.mensaje.audio-msg {
+  min-width: 280px;
+}
+
 @keyframes bubbleIn {
   from { opacity: 0; transform: scale(0.85) translateY(8px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -436,9 +441,14 @@ body {
 }
 
 .mensaje-audio {
+  display: block;
   width: 100%;
-  height: 36px;
+  min-width: 240px;
+  height: 54px;
   margin-bottom: 2px;
+  border-radius: var(--radius-sm);
+  /* evitar que el fondo azul del bubble oscurezca los controles nativos */
+  filter: none;
 }
 
 .archivo-nombre {
