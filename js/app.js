@@ -411,35 +411,57 @@ document.getElementById('form-container').addEventListener('submit', async (e) =
     play('mensaje');
 });
 
-// ── Emojis — inserta en el campo de texto, NO envía el mensaje ──
+// ── Emojis — inserta en el campo de texto usando emoji-picker-element ──
 (function setupEmojis() {
-    const emojiBtn   = document.getElementById('emoji-button');
-    const emojiPanel = document.getElementById('emoji-panel');
-    const inputMsg   = document.getElementById('input-mensaje');
+    const emojiBtn    = document.getElementById('emoji-button');
+    const emojiPanel  = document.getElementById('emoji-panel');
+    const emojiPicker = document.getElementById('emoji-picker');
+    const inputMsg    = document.getElementById('input-mensaje');
+
+    // Sincronizar tema del picker con el tema actual
+    function syncPickerTheme() {
+        const theme = document.documentElement.getAttribute('data-theme') || 'light';
+        if (emojiPicker) emojiPicker.setAttribute('data-source',
+            'https://cdn.jsdelivr.net/npm/emoji-picker-element-data@^1/es/cldr/data.json');
+        if (emojiPicker) {
+            // emoji-picker-element usa el atributo 'class' para dark mode
+            emojiPicker.classList.toggle('dark', theme === 'dark');
+            emojiPicker.classList.toggle('light', theme !== 'dark');
+        }
+    }
+
+    // Aplicar tema inicial y observar cambios de tema
+    syncPickerTheme();
+    const themeObserver = new MutationObserver(syncPickerTheme);
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     // Abrir / cerrar panel
     emojiBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         emojiPanel.classList.toggle('hidden');
+        if (!emojiPanel.classList.contains('hidden')) {
+            syncPickerTheme();
+        }
     });
 
-    // Al hacer clic en un emoji: insertar en el campo de texto
-    emojiPanel.addEventListener('click', (e) => {
-        e.stopPropagation();          // evita que llegue al document
-        const btn = e.target.closest('.emoji');
-        if (!btn) return;
+    // Evento nativo de emoji-picker-element: 'emoji-click'
+    if (emojiPicker) {
+        emojiPicker.addEventListener('emoji-click', (e) => {
+            const emoji = e.detail.unicode;
+            if (!emoji) return;
 
-        // Insertar en la posición del cursor
-        const start = inputMsg.selectionStart ?? inputMsg.value.length;
-        const end   = inputMsg.selectionEnd   ?? inputMsg.value.length;
-        const emoji = btn.dataset.emoji || btn.textContent.trim();
-        inputMsg.value = inputMsg.value.slice(0, start) + emoji + inputMsg.value.slice(end);
-        // Dejar el cursor después del emoji
-        const newPos = start + emoji.length;
-        inputMsg.setSelectionRange(newPos, newPos);
-        // NO cerrar el panel, NO enviar
-        // El usuario presiona Enter o el botón Enviar cuando quiera
-    });
+            // Insertar en la posición del cursor
+            const start = inputMsg.selectionStart ?? inputMsg.value.length;
+            const end   = inputMsg.selectionEnd   ?? inputMsg.value.length;
+            inputMsg.value = inputMsg.value.slice(0, start) + emoji + inputMsg.value.slice(end);
+
+            // Dejar cursor después del emoji
+            const newPos = start + emoji.length;
+            inputMsg.focus();
+            inputMsg.setSelectionRange(newPos, newPos);
+            // NO cerrar el panel — el usuario cierra cuando quiera
+        });
+    }
 
     // Cerrar si se hace clic fuera del panel o del botón
     document.addEventListener('click', (e) => {

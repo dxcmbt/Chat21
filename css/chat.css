@@ -493,21 +493,15 @@ body {
 
 #chat-tools button svg { width: 17px; height: 17px; }
 
-/* Emoji Panel */
+/* Emoji Panel — full picker */
 #emoji-panel {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 20px;
-  background: var(--bg-elevated);
-  backdrop-filter: blur(24px) saturate(1.8);
-  border: 1px solid var(--separator);
-  box-shadow: var(--shadow-lg);
+  z-index: 200;
   border-radius: var(--radius-lg);
-  padding: 10px;
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
-  z-index: 100;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
   animation: fadeUp 0.18s ease;
 }
 
@@ -518,19 +512,41 @@ body {
 
 #emoji-panel.hidden { display: none; }
 
-#emoji-panel .emoji {
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  transition: var(--transition);
-}
+/* ── Personalizar emoji-picker-element con CSS vars del tema ── */
+emoji-picker {
+  /* Colores del panel */
+  --background:              var(--bg-elevated);
+  --border-color:            var(--separator);
+  --border-size:             1px;
+  --category-font-color:     var(--text-secondary);
+  --indicator-color:         var(--accent);
+  --input-border-color:      var(--separator);
+  --input-border-radius:     var(--radius-full);
+  --input-font-color:        var(--text-primary);
+  --input-placeholder-color: var(--text-tertiary);
+  --outline-color:           var(--accent);
 
-#emoji-panel .emoji:hover {
-  background: var(--bg-input);
-  transform: scale(1.2);
+  /* Hover / selección */
+  --button-hover-background: var(--bg-input);
+  --button-active-background:var(--bg-tertiary);
+
+  /* Scrollbar */
+  --scrollbar-color:         var(--text-tertiary);
+
+  /* Tamaño */
+  --num-columns:             8;
+  --emoji-size:              1.4rem;
+  --emoji-padding:           0.4rem;
+
+  width:  360px;
+  height: 360px;
+
+  /* Integración con glassmorphism */
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-lg);
+  font-family: 'Inter', sans-serif;
 }
 
 /* ── Input Form ─────────────────────────────────────── */
