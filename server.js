@@ -13,7 +13,19 @@ const io = new Server(server);
 let db = null;
 
 try {
-    const serviceAccount = require(path.join(__dirname, 'chat21-b25b2-firebase-adminsdk-key.json'));
+    let serviceAccount;
+
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        // Producción (Railway): credenciales desde variable de entorno (JSON en base64)
+        serviceAccount = JSON.parse(
+            Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8')
+        );
+        console.log('🔑 Usando credenciales Firebase desde variable de entorno');
+    } else {
+        // Desarrollo local: credenciales desde archivo JSON
+        serviceAccount = require(path.join(__dirname, 'chat21-b25b2-firebase-adminsdk-key.json'));
+        console.log('🔑 Usando credenciales Firebase desde archivo local');
+    }
 
     initializeApp({
         credential: cert(serviceAccount),
